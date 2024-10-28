@@ -771,10 +771,10 @@ void switchtec_perror(const char *str)
  * The echo command takes 4 bytes and returns the bitwise-not of those
  * bytes.
  */
-int switchtec_echo(struct switchtec_dev *dev, uint32_t *input,
+int switchtec_echo(struct switchtec_dev *dev, uint32_t input,
 		   uint32_t *output)
 {
-	return switchtec_cmd(dev, MRPC_ECHO, input, sizeof(input),
+	return switchtec_cmd(dev, MRPC_ECHO, &input, sizeof(input),
 			     output, sizeof(*output));
 }
 
@@ -789,7 +789,7 @@ int switchtec_echo(struct switchtec_dev *dev, uint32_t *input,
  * bytes.
  */
 int switchtec_echo64(struct switchtec_dev *dev, uint32_t *input,
-		   uint32_t *output, uint32_t in_sz, uint32_t out_sz)
+		   uint32_t in_sz, uint32_t *output,  uint32_t out_sz)
 {
 	return switchtec_cmd(dev, MRPC_ECHO64, input, in_sz,
 			     output, out_sz);

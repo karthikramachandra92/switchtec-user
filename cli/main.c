@@ -1260,7 +1260,7 @@ static int test(int argc, char **argv)
 
 	in = time(NULL);
 
-	ret = switchtec_echo(cfg.dev, &in, &out);
+	ret = switchtec_echo(cfg.dev, in, &out);
 
 	if (ret) {
 		switchtec_perror(argv[0]);
@@ -1289,8 +1289,10 @@ static int test64(int argc, char **argv)
 		struct switchtec_dev *dev;
 		uint32_t iter_n;
 		bool quiet;
-		
-	} cfg = {};
+	} cfg = {
+		.iter_n = 1,
+		.quiet = false
+	};
 	const struct argconfig_options opts[] = {
 		DEVICE_OPTION,
 		{"iterations", 'i', "ITER", CFG_NONNEGATIVE, &cfg.iter_n,
@@ -1316,7 +1318,7 @@ static int test64(int argc, char **argv)
 		return -1;
 
 	while( cfg.iter_n ) {
-		ret = switchtec_echo64(cfg.dev, echo64.in, out, echo64.in_sz, sizeof(uint32_t) * 4);
+		ret = switchtec_echo64(cfg.dev, echo64.in, echo64.in_sz, out, sizeof(uint32_t) * 4);
 
 		if (ret) {
 			switchtec_perror(argv[0]);
