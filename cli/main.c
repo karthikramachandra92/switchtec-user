@@ -1287,9 +1287,16 @@ static int test64(int argc, char **argv)
 
 	static struct {
 		struct switchtec_dev *dev;
+		uint32_t iter_n;
+		bool quiet;
+		
 	} cfg = {};
 	const struct argconfig_options opts[] = {
 		DEVICE_OPTION,
+		{"iterations", 'i', "ITER", CFG_NONNEGATIVE, &cfg.iter_n,
+		 required_argument, "Number of iterations for DMA transfer"},
+		{"quiet", 'q', "", CFG_NONE, &cfg.quiet, no_argument,
+		 "skip printing all log entries"},
 		{NULL}};
 
 	struct {
@@ -1301,37 +1308,43 @@ static int test64(int argc, char **argv)
 	};
 
 	argconfig_parse(argc, argv, CMD_DESC_TEST, opts, &cfg, sizeof(cfg));
-	for (int i = 0; i < echo64.in_sz; i++)
+	for (int i = 0; i < (echo64.in_sz / 4); i++)
 		echo64.in[i] = rand();
 
 	uint32_t *out = calloc(sizeof(uint32_t), 4);
 	if (!out)
 		return -1;
 
-	ret = switchtec_echo64(cfg.dev, echo64.in, out, echo64.in_sz, sizeof(uint32_t) * 4);
+	while( cfg.iter_n ) {
+		ret = switchtec_echo64(cfg.dev, echo64.in, out, echo64.in_sz, sizeof(uint32_t) * 4);
 
-	if (ret) {
-		switchtec_perror(argv[0]);
-		return ret;
-	}
-
-	/* Expecting only 16 bytes as response from the switch for DMA test experiment */
-	for (int i=0; i < echo64.in_sz / 16; i++)
-	{
-		if (out[i] != ~echo64.in[i])
-		{
-			fprintf(stderr, "%s: echo command returned the "
-				"wrong result; got %x, expected %x\n",
-				argv[0], out[i], ~echo64.in[i]);
-			return 1;
+		if (ret) {
+			switchtec_perror(argv[0]);
+			return ret;
 		}
-		else
-			fprintf(stdout, "%s: echo64 command returned the following bytes "
-				"orig: %x, got: %x, expected: %x\n",
-				argv[0], echo64.in[i], out[i], ~echo64.in[i]);
+
+		if(!cfg.quiet) {
+			/* Expecting only 16 bytes as response from the switch for DMA test experiment */
+			for (int i=0; i < echo64.in_sz / 16; i++)
+			{
+				if (out[i] != ~echo64.in[i])
+				{
+					fprintf(stderr, "%s: echo command returned the "
+						"wrong result; got %x, expected %x\n",
+						argv[0], out[i], ~echo64.in[i]);
+					return 1;
+				}
+				else
+					fprintf(stdout, "%s: echo64 command returned the following bytes "
+						"orig: %x, got: %x, expected: %x\n",
+						argv[0], echo64.in[i], out[i], ~echo64.in[i]);
+			}
+
+			fprintf(stderr, "%s: success\n", argv[0]);
+		}
+		cfg.iter_n--;
 	}
 
-	fprintf(stderr, "%s: success\n", argv[0]);
 	free(out);
 	return 0;
 }
