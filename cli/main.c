@@ -1260,7 +1260,7 @@ static int test(int argc, char **argv)
 
 	in = time(NULL);
 
-	ret = switchtec_echo(cfg.dev, in, &out);
+	ret = switchtec_echo(cfg.dev, &in, &out);
 
 	if (ret) {
 		switchtec_perror(argv[0]);
@@ -1278,6 +1278,64 @@ static int test(int argc, char **argv)
 
 	return 0;
 }
+
+#define CMD_DESC_TEST64 "test if the Switchtec interface is working"
+
+static int test64(int argc, char **argv)
+{
+	int ret;
+
+	static struct {
+		struct switchtec_dev *dev;
+	} cfg = {};
+	const struct argconfig_options opts[] = {
+		DEVICE_OPTION,
+		{NULL}};
+
+	struct {
+		uint32_t in_sz;
+		uint32_t in[16];
+	} echo64 = {
+		.in_sz = 64,
+		.in = {0}
+	};
+
+	argconfig_parse(argc, argv, CMD_DESC_TEST, opts, &cfg, sizeof(cfg));
+	for (int i = 0; i < echo64.in_sz; i++)
+		echo64.in[i] = rand();
+
+	uint32_t *out = calloc(sizeof(uint32_t), 4);
+	if (!out)
+		return -1;
+
+	ret = switchtec_echo64(cfg.dev, echo64.in, out, echo64.in_sz, sizeof(uint32_t) * 4);
+
+	if (ret) {
+		switchtec_perror(argv[0]);
+		return ret;
+	}
+
+	/* Expecting only 16 bytes as response from the switch for DMA test experiment */
+	for (int i=0; i < echo64.in_sz / 16; i++)
+	{
+		if (out[i] != ~echo64.in[i])
+		{
+			fprintf(stderr, "%s: echo command returned the "
+				"wrong result; got %x, expected %x\n",
+				argv[0], out[i], ~echo64.in[i]);
+			return 1;
+		}
+		else
+			fprintf(stdout, "%s: echo64 command returned the following bytes "
+				"orig: %x, got: %x, expected: %x\n",
+				argv[0], echo64.in[i], out[i], ~echo64.in[i]);
+	}
+
+	fprintf(stderr, "%s: success\n", argv[0]);
+	free(out);
+	return 0;
+}
+
 
 #define CMD_DESC_TEMP "display the die temperature"
 
@@ -2646,7 +2704,7 @@ static const struct cmd commands[] = {
 	CMD(evcntr_show, CMD_DESC_EVCNTR_SHOW),
 	CMD(evcntr_del, CMD_DESC_EVCNTR_DEL),
 	CMD(evcntr_wait, CMD_DESC_EVCNTR_WAIT),
-	{},
+	CMD(test64, CMD_DESC_TEST64),	{},
 };
 
 static struct subcommand subcmd = {
